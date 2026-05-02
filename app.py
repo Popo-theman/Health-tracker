@@ -1,11 +1,11 @@
 import streamlit as st
 
-st.set_page_config(page_title="Pond's Health Tracker V2", page_icon="🏥")
+st.set_page_config(page_title="Pond's Health Tracker V2.1", page_icon="🏥")
 
-st.title("🏥 My Personal Health & Diet (V2.0)")
-st.subheader("ระบบบันทึกสุขภาพพร้อมฐานข้อมูลแคลอรี่อัตโนมัติ")
+st.title("🏥 My Personal Health & Diet (V2.1)")
+st.subheader("ระบบบันทึกสุขภาพพร้อมระบบคำนวณอัตโนมัติ")
 
-# 1. ฐานข้อมูลอาหาร (Food Database)
+# 1. ฐานข้อมูลอาหาร
 food_db = {
     "--- เลือกเมนู หรือ กำหนดเอง ---": 0,
     "น้ำเปล่า + น้ำมันมะกอก + กาแฟดำดริป": 130,
@@ -19,7 +19,7 @@ food_db = {
     "ผลไม้ตามฤดูกาล (1 จานเล็ก)": 100,
 }
 
-# ส่วนที่ 1: ข้อมูลร่างกาย (Sidebar ด้านข้าง)
+# ส่วนที่ 1: ข้อมูลร่างกาย (Sidebar)
 with st.sidebar:
     st.header("👤 ข้อมูลส่วนตัว")
     age = st.number_input("อายุ (ปี)", value=45)
@@ -30,34 +30,31 @@ with st.sidebar:
         ["ไม่ออกกำลังกายเลย", "ออกกำลังกายเบาๆ (1-3 วัน/สัปดาห์)", 
          "ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)", "ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)"]
     )
-    sleep = st.slider("เวลานอน (ชั่วโมง)", 0, 12, 7)
 
 # ส่วนที่ 2: บันทึกอาหาร
 st.header("🍽️ บันทึกการกินวันนี้")
 
-# สร้างตัวเลือกอาหารและดึงแคลอรี่มาแสดงอัตโนมัติ
 col1, col2 = st.columns(2)
 with col1:
-    bf_select = st.selectbox("มื้อเช้า", list(food_db.keys()), index=1)
+    bf_select = st.selectbox("มื้อเช้า", list(food_db.keys()), index=1, key="bf_s")
 with col2:
-    bf_cal = st.number_input("แคลอรี่ (เช้า)", value=food_db[bf_select], key="bf_cal")
+    bf_cal = st.number_input("แคลอรี่ (เช้า)", value=food_db[bf_select])
 
 col3, col4 = st.columns(2)
 with col3:
-    lunch_select = st.selectbox("มื้อเที่ยง", list(food_db.keys()), index=0)
+    lunch_select = st.selectbox("มื้อเที่ยง", list(food_db.keys()), index=0, key="lh_s")
 with col4:
-    lunch_cal = st.number_input("แคลอรี่ (เที่ยง)", value=food_db[lunch_select], key="lunch_cal")
+    lunch_cal = st.number_input("แคลอรี่ (เที่ยง)", value=food_db[lunch_select])
 
 col5, col6 = st.columns(2)
 with col5:
-    dinner_select = st.selectbox("มื้อเย็น", list(food_db.keys()), index=0)
+    dinner_select = st.selectbox("มื้อเย็น", list(food_db.keys()), index=0, key="dn_s")
 with col6:
-    dinner_cal = st.number_input("แคลอรี่ (เย็น)", value=food_db[dinner_select], key="dinner_cal")
+    dinner_cal = st.number_input("แคลอรี่ (เย็น)", value=food_db[dinner_select])
 
-# คำนวณผลลัพธ์
+# --- ส่วนคำนวณตัวเลข ---
 height_m = height / 100
 bmi = weight / (height_m ** 2)
-
 bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
 activity_map = {"ไม่ออกกำลังกายเลย": 1.2, "ออกกำลังกายเบาๆ (1-3 วัน/สัปดาห์)": 1.375, 
                 "ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)": 1.55, "ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)": 1.725}
@@ -75,7 +72,5 @@ c3.metric("กินเข้าไปรวม", f"{int(total_in)} kcal")
 
 if diff > 0:
     st.success(f"วันนี้ทำได้ดีมากครับ! ร่างกายติดลบไป {int(diff)} แคลอรี่ (ดึงไขมันมาใช้แล้ว)")
-elif diff < 0:
-    st.warning(f"วันนี้กินเกินไป {int(abs(diff))} แคลอรี่ ต้องขยับร่างกายเพิ่มขึ้นนะครับ")
 else:
-    st.info("วันนี้กินพลังงานเท่ากับที่เผาผลาญพอดีเลยครับ")
+    st.warning(f"วันนี้กินเกินไป {int(abs(diff))} แคลอรี่ ต้องขยับร่างกายเพิ่มขึ้นนะครับ")
