@@ -5,7 +5,7 @@ import re
 st.set_page_config(page_title="Pond's Health Tracker V3.1", page_icon="📊")
 
 # --- ส่วนการดึงข้อมูลจาก Google Sheets ---
-sheet_url = "ใส่ลิงก์ Google Sheets ของคุณที่นี่"
+sheet_url = "https://docs.google.com/spreadsheets/d/1tOHQx1UyqpZPdoExF89EZQq_-p8xaTBk0plXAzwQKQM/edit?usp=drivesdk "
 
 def get_csv_url(url):
     pattern = r'https://docs\.google\.com/spreadsheets/d/([a-zA-Z0-9-_]+)'
