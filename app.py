@@ -1,29 +1,35 @@
 import streamlit as st
+import pandas as pd
 
-st.set_page_config(page_title="Pond's Health Tracker V2.1", page_icon="🏥")
+st.set_page_config(page_title="Pond's Health Tracker V3.0", page_icon="📊")
 
-st.title("🏥 My Personal Health & Diet (V2.1)")
-st.subheader("ระบบบันทึกสุขภาพพร้อมระบบคำนวณอัตโนมัติ")
+# --- ส่วนการดึงข้อมูลจาก Google Sheets ของคุณ ---
+sheet_url = "https://docs.google.com/spreadsheets/d/1tOHQx1UyqpZPdoExF89EZQq_-p8xaTBk0plXAzwQKQM/edit?usp=sharing"
+# เปลี่ยนท้ายลิงก์ให้เป็นรูปแบบ CSV เพื่อให้โปรแกรมอ่านง่าย
+csv_url = sheet_url.replace('/edit?usp=sharing', '/gviz/tq?tqx=out:csv')
 
-# 1. ฐานข้อมูลอาหาร
-food_db = {
-    "--- เลือกเมนู หรือ กำหนดเอง ---": 0,
-    "น้ำเปล่า + น้ำมันมะกอก + กาแฟดำดริป": 130,
-    "ข้าวราดกะเพราไก่ไข่ดาว": 600,
-    "ข้าวมันไก่": 596,
-    "ก๋วยเตี๋ยวหมูน้ำตก": 350,
-    "ผัดไทยกุ้งสด": 550,
-    "ข้าวไข่เจียว": 450,
-    "สลัดผักไก่ย่าง": 150,
-    "ส้มตำไทย": 60,
-    "ผลไม้ตามฤดูกาล (1 จานเล็ก)": 100,
-}
+@st.cache_data(ttl=600) # ให้รีเฟรชข้อมูลทุก 10 นาที หรือเมื่อกด Rerun
+def load_food_data(url):
+    df = pd.read_csv(url)
+    # สร้าง Dictionary จาก Sheets: โดยใช้คอลัมน์ Menu เป็นชื่อ และ Calories เป็นค่า
+    return pd.Series(df.Calories.values, index=df.Menu).to_dict()
+
+try:
+    food_db = load_food_data(csv_url)
+    food_list = ["--- เลือกเมนู หรือ กำหนดเอง ---"] + list(food_db.keys())
+except Exception as e:
+    st.error("ไม่สามารถเชื่อมต่อ Google Sheets ได้ ตรวจสอบว่าตั้งค่า 'ทุกคนที่มีลิงก์มีสิทธิ์อ่าน' แล้วหรือยัง")
+    food_db = {"--- เลือกเมนู หรือ กำหนดเอง ---": 0}
+    food_list = list(food_db.keys())
+
+st.title("📊 Health Tracker V3.0")
+st.subheader("จัดการเมนูอาหารผ่าน Google Sheets")
 
 # ส่วนที่ 1: ข้อมูลร่างกาย (Sidebar)
 with st.sidebar:
     st.header("👤 ข้อมูลส่วนตัว")
     age = st.number_input("อายุ (ปี)", value=45)
-    weight = st.number_input("น้ำหนักปัจจุบัน (กก.)", value=89.0)
+    weight = st.number_input("น้ำหนัก (กก.)", value=89.0)
     height = st.number_input("ส่วนสูง (ซม.)", value=167)
     activity = st.selectbox(
         "กิจกรรมในแต่ละวัน",
@@ -34,23 +40,18 @@ with st.sidebar:
 # ส่วนที่ 2: บันทึกอาหาร
 st.header("🍽️ บันทึกการกินวันนี้")
 
-col1, col2 = st.columns(2)
-with col1:
-    bf_select = st.selectbox("มื้อเช้า", list(food_db.keys()), index=1, key="bf_s")
-with col2:
-    bf_cal = st.number_input("แคลอรี่ (เช้า)", value=food_db[bf_select])
+def food_section(label, key_s, key_n):
+    col_a, col_b = st.columns(2)
+    with col_a:
+        sel = st.selectbox(label, food_list, key=key_s)
+    with col_b:
+        # ดึงค่าแคลอรี่จากฐานข้อมูล ถ้าไม่เจอก็ให้เป็น 0
+        val = food_db.get(sel, 0)
+        return st.number_input(f"แคลอรี่ ({label})", value=int(val), key=key_n)
 
-col3, col4 = st.columns(2)
-with col3:
-    lunch_select = st.selectbox("มื้อเที่ยง", list(food_db.keys()), index=0, key="lh_s")
-with col4:
-    lunch_cal = st.number_input("แคลอรี่ (เที่ยง)", value=food_db[lunch_select])
-
-col5, col6 = st.columns(2)
-with col5:
-    dinner_select = st.selectbox("มื้อเย็น", list(food_db.keys()), index=0, key="dn_s")
-with col6:
-    dinner_cal = st.number_input("แคลอรี่ (เย็น)", value=food_db[dinner_select])
+bf_cal = food_section("มื้อเช้า", "s1", "n1")
+lunch_cal = food_section("มื้อเที่ยง", "s2", "n2")
+dinner_cal = food_section("มื้อเย็น", "s3", "n3")
 
 # --- ส่วนคำนวณตัวเลข ---
 height_m = height / 100
@@ -71,6 +72,8 @@ c2.metric("เผาผลาญ (TDEE)", f"{int(tdee)} kcal")
 c3.metric("กินเข้าไปรวม", f"{int(total_in)} kcal")
 
 if diff > 0:
-    st.success(f"วันนี้ทำได้ดีมากครับ! ร่างกายติดลบไป {int(diff)} แคลอรี่ (ดึงไขมันมาใช้แล้ว)")
+    st.success(f"วันนี้ติดลบไป {int(diff)} แคลอรี่ (ดึงไขมันมาใช้)")
 else:
-    st.warning(f"วันนี้กินเกินไป {int(abs(diff))} แคลอรี่ ต้องขยับร่างกายเพิ่มขึ้นนะครับ")
+    st.warning(f"วันนี้เกินไป {int(abs(diff))} แคลอรี่")
+
+st.info("💡 ทริค: หากเพิ่มเมนูใน Google Sheets แล้วไม่ขึ้น ให้กดปุ่ม R (Rerun) หรือรอประมาณ 10 นาทีครับ")
